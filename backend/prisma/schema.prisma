@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DetectedIP {
+  id          String   @id @default(uuid())
+  ipAddress   String   @unique
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @updatedAt
+  status      String   @default("UNVERIFIED") // UNVERIFIED, SAFE, SUSPICIOUS, MALICIOUS
+  threatScore Int      @default(0)
+  scans       ThreatScan[]
+  blocked     BlockedIP?
+}
+
+model ThreatScan {
+  id           String     @id @default(uuid())
+  ipAddress    String
+  detectedIp   DetectedIP @relation(fields: [ipAddress], references: [ipAddress])
+  scanDate     DateTime   @default(now())
+  provider     String     // e.g., AbuseIPDB, VirusTotal
+  isMalicious  Boolean    @default(false)
+  confidence   Int        @default(0)
+  rawResponse  Json?
+}
+
+model BlockedIP {
+  id         String     @id @default(uuid())
+  ipAddress  String     @unique
+  detectedIp DetectedIP @relation(fields: [ipAddress], references: [ipAddress])
+  blockedAt  DateTime   @default(now())
+  reason     String
+  blockedBy  String     // e.g., AUTOMATED, USER_ID
+}
