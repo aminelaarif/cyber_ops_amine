@@ -1,5 +1,6 @@
 import express from 'express';
 import { prisma } from '../index.js';
+import { scanNetwork } from '../services/scanner.js';
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Ingest a new IP (mock webhook/sensor endpoint)
+// Ingest a new IP (mock webhook/sensor endpoint) - Keeping for backwards compatibility
 router.post('/ingest', async (req, res) => {
   try {
     const { ipAddress } = req.body;
@@ -43,12 +44,37 @@ router.post('/ingest', async (req, res) => {
       }
     });
 
-    // In a real app, this might trigger an async job to scan the IP
-    // For now, we'll just return the recorded IP
     res.status(201).json({ message: 'IP ingested successfully', ip });
   } catch (error) {
     console.error('Error ingesting IP:', error);
     res.status(500).json({ error: 'Failed to ingest IP' });
+  }
+});
+
+// Trigger a real network scan
+router.post('/scan-network', async (req, res) => {
+  try {
+    const subnet = req.body.subnet || '192.168.1.0/24';
+    const discoveredIps = await scanNetwork(subnet);
+    
+    const results = [];
+    for (const ipAddress of discoveredIps) {
+      const ip = await prisma.detectedIP.upsert({
+        where: { ipAddress },
+        update: { lastSeen: new Date() },
+        create: { 
+          ipAddress,
+          status: 'UNVERIFIED',
+          threatScore: 0
+        }
+      });
+      results.push(ip);
+    }
+    
+    res.json({ message: `Scan complete. Found ${discoveredIps.length} active hosts.`, ips: results });
+  } catch (error) {
+    console.error('Error scanning network:', error);
+    res.status(500).json({ error: 'Failed to scan network' });
   }
 });
 

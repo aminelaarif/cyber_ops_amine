@@ -88,6 +88,34 @@ const useIPStore = create((set, get) => ({
     return await res.json();
   },
 
+  unblockIP: async (ipAddress) => {
+    const res = await fetch(`${API_URL}/api/alerts/${ipAddress}/unblock`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Unblock failed');
+    get().fetchIPs();
+    return await res.json();
+  },
+
+  scanLocalNetwork: async (subnet = '192.168.1.0/24') => {
+    set({ isLoading: true });
+    try {
+      const res = await fetch(`${API_URL}/api/ips/scan-network`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ subnet }),
+      });
+      if (!res.ok) throw new Error('Network scan failed');
+      const data = await res.json();
+      get().fetchIPs();
+      return data;
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
   seedMockData: async () => {
     const mockIPs = [
       '192.168.1.1', '10.0.0.5', '172.16.0.10', '203.0.113.5',

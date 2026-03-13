@@ -6,7 +6,7 @@ import {
   useReactTable, getCoreRowModel, getFilteredRowModel, getSortedRowModel,
   flexRender, createColumnHelper,
 } from '@tanstack/react-table';
-import { Search, ScanLine, ShieldBan, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Search, ScanLine, ShieldBan, ShieldCheck, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import useIPStore from '../store/useIPStore';
 
 const statusColors = {
@@ -19,7 +19,7 @@ const statusColors = {
 const columnHelper = createColumnHelper();
 
 export default function NetworkActivity() {
-  const { ips, isLoading, fetchIPs, scanIP, blockIP } = useIPStore();
+  const { ips, isLoading, fetchIPs, scanIP, blockIP, unblockIP } = useIPStore();
   const [globalFilter, setGlobalFilter] = useState('');
   const [scanning, setScanning] = useState({});
   const [blocking, setBlocking] = useState({});
@@ -49,6 +49,18 @@ export default function NetworkActivity() {
     try {
       await blockIP(ipAddress, 'Manually blocked by operator');
       showNotif(`✓ Blocked ${ipAddress}`);
+    } catch (e) {
+      showNotif(`✗ ${e.message}`, 'error');
+    } finally {
+      setBlocking(prev => ({ ...prev, [ipAddress]: false }));
+    }
+  };
+
+  const handleUnblock = async (ipAddress) => {
+    setBlocking(prev => ({ ...prev, [ipAddress]: true }));
+    try {
+      await unblockIP(ipAddress);
+      showNotif(`✓ Unblocked ${ipAddress}`);
     } catch (e) {
       showNotif(`✗ ${e.message}`, 'error');
     } finally {
@@ -168,6 +180,20 @@ export default function NetworkActivity() {
                 _hover={{ bg: 'rgba(239,68,68,0.2)' }}
               >
                 <ShieldBan size={12} style={{ marginRight: 4 }} /> Block
+              </Button>
+            )}
+            {ip.blocked && (
+              <Button
+                size="xs"
+                bg="rgba(16,185,129,0.1)"
+                color="var(--accent-green)"
+                border="1px solid rgba(16,185,129,0.25)"
+                borderRadius="md"
+                loading={blocking[ip.ipAddress]}
+                onClick={() => handleUnblock(ip.ipAddress)}
+                _hover={{ bg: 'rgba(16,185,129,0.2)' }}
+              >
+                <ShieldCheck size={12} style={{ marginRight: 4 }} /> Unblock
               </Button>
             )}
           </HStack>

@@ -4,7 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { Shield, ShieldAlert, AlertTriangle, Activity, RefreshCw, Download, Zap } from 'lucide-react';
+import { Shield, ShieldAlert, AlertTriangle, Activity, RefreshCw, Download, Zap, ScanLine } from 'lucide-react';
 import useIPStore from '../store/useIPStore';
 
 const StatCard = ({ icon: Icon, label, value, color, sublabel }) => (
@@ -76,7 +76,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
-  const { ips, stats, isLoading, fetchIPs, fetchAlerts, alerts, scanIP, seedMockData } = useIPStore();
+  const { ips, stats, isLoading, fetchIPs, fetchAlerts, alerts, scanIP, seedMockData, scanLocalNetwork } = useIPStore();
 
   useEffect(() => {
     fetchIPs();
@@ -104,6 +104,14 @@ export default function Dashboard() {
     const unscanned = ips.filter(ip => ip.status === 'UNVERIFIED').slice(0, 5);
     for (const ip of unscanned) {
       try { await scanIP(ip.ipAddress); } catch {}
+    }
+  };
+
+  const handleScanNetwork = async () => {
+    try {
+      await scanLocalNetwork('192.168.1.0/24');
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -160,13 +168,25 @@ export default function Dashboard() {
           </Button>
           <Button
             size="sm"
+            bg="rgba(16,185,129,0.15)"
+            color="var(--accent-green)"
+            border="1px solid rgba(16,185,129,0.3)"
+            borderRadius="lg"
+            onClick={handleScanNetwork}
+            _hover={{ bg: 'rgba(16,185,129,0.25)' }}
+            leftIcon={<Activity size={14} />}
+          >
+            Scan Local Network
+          </Button>
+          <Button
+            size="sm"
             bg="rgba(6,182,212,0.15)"
             color="var(--accent-cyan)"
             border="1px solid rgba(6,182,212,0.3)"
             borderRadius="lg"
             onClick={handleScanAll}
             _hover={{ bg: 'rgba(6,182,212,0.25)' }}
-            leftIcon={<Activity size={14} />}
+            leftIcon={<ScanLine size={14} />}
           >
             Scan Unverified
           </Button>
