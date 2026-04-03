@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Box, Grid, GridItem, Text, Flex, HStack, Button, Spinner } from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Box, Grid, GridItem, Text, Flex, HStack, Button, Spinner, Input } from '@chakra-ui/react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -76,7 +76,9 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
-  const { ips, stats, isLoading, fetchIPs, fetchAlerts, alerts, scanIP, seedMockData, scanLocalNetwork } = useIPStore();
+  const { ips, stats, isLoading, fetchIPs, fetchAlerts, alerts, scanIP, ingestIP, seedMockData, scanLocalNetwork } = useIPStore();
+  const [manualIp, setManualIp] = useState('');
+  const [isIngesting, setIsIngesting] = useState(false);
 
   useEffect(() => {
     fetchIPs();
@@ -115,6 +117,28 @@ export default function Dashboard() {
     }
   };
 
+  const handleManualCheck = async () => {
+    if (!manualIp) return;
+    
+    // Basic IP validation
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    if (!ipRegex.test(manualIp)) {
+      window.alert("Invalid IP: Please enter a valid IPv4 address.");
+      return;
+    }
+
+    setIsIngesting(true);
+    try {
+      await ingestIP(manualIp);
+      setManualIp('');
+      window.alert(`Successfully checked ${manualIp} against AbuseIPDB.`);
+    } catch (error) {
+      window.alert("Check Failed: Failed to check IP address.");
+    } finally {
+      setIsIngesting(false);
+    }
+  };
+
   const exportCSV = () => {
     const headers = ['IP Address', 'Status', 'Threat Score', 'First Seen', 'Last Seen'];
     const rows = ips.map(ip => [
@@ -140,6 +164,35 @@ export default function Dashboard() {
           </Text>
         </Box>
         <HStack gap="3">
+          {/* Manual IP Check */}
+          <HStack gap="2" mr="2">
+            <Input
+              size="sm"
+              placeholder="Enter IP (e.g. 8.8.8.8)"
+              value={manualIp}
+              onChange={(e) => setManualIp(e.target.value)}
+              bg="rgba(0,0,0,0.2)"
+              border="1px solid"
+              borderColor="var(--border-color)"
+              color="white"
+              borderRadius="lg"
+              _placeholder={{ color: 'var(--text-muted)' }}
+              w="180px"
+            />
+            <Button
+              size="sm"
+              bg="rgba(139,92,246,0.15)"
+              color="var(--accent-purple, #8b5cf6)"
+              border="1px solid rgba(139,92,246,0.3)"
+              borderRadius="lg"
+              onClick={handleManualCheck}
+              isLoading={isIngesting}
+              _hover={{ bg: 'rgba(139,92,246,0.25)' }}
+            >
+              Check IP
+            </Button>
+          </HStack>
+
           {ips.length === 0 && (
             <Button
               size="sm"

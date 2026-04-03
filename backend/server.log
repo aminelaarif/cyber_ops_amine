@@ -1,0 +1,29 @@
+
+> backend@1.0.0 dev
+> nodemon src/index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+
+  #  Node.js[41154]: void node::ResetStdio() at ../src/node.cc:756
+  #  Assertion failed: !(err != 0) || (err == -1 && (*__errno_location ()) == 1)
+
+----- Native stack trace -----
+
+ 1: 0xf76da7 node::Assert(node::AssertionInfo const&) [node]
+ 2: 0xf23a44  [node]
+ 3: 0x7064c9247a76  [/lib/x86_64-linux-gnu/libc.so.6]
+ 4: 0x7064c9247bbe  [/lib/x86_64-linux-gnu/libc.so.6]
+ 5: 0xe7aa4f node::DefaultProcessExitHandlerInternal(node::Environment*, node::ExitCode) [node]
+ 6: 0xee32ef node::Environment::Exit(node::ExitCode) [node]
+ 7: 0x7064c25cf5e2 
+
+  #  Node.js[41154]: void node::ResetStdio() at ../src/node.cc:756
+  #  Assertion failed: !(err != 0) || (err == -1 && (*__errno_location ()) == 1)
+
+----- Native stack trace -----
+

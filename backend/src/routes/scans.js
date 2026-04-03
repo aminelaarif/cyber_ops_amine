@@ -3,22 +3,7 @@ import { prisma } from '../index.js';
 
 const router = express.Router();
 
-// Mock function to simulate calling Threat Intelligence APIs (e.g. VirusTotal, AbuseIPDB)
-const mockThreatScan = async (ipAddress) => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Randomly assign a threat score and malicious status for demonstration
-  const randomScore = Math.floor(Math.random() * 100);
-  const isMalicious = randomScore > 50;
-  
-  return {
-    provider: Math.random() > 0.5 ? 'VirusTotal' : 'AbuseIPDB',
-    isMalicious,
-    confidence: isMalicious ? randomScore : 100 - randomScore,
-    rawResponse: { message: 'This is a mock response from ' + ipAddress }
-  };
-};
+import { checkIpWithAbuseIPDB } from '../services/ipdb.js';
 
 router.post('/:ipAddress/scan', async (req, res) => {
   try {
@@ -33,13 +18,16 @@ router.post('/:ipAddress/scan', async (req, res) => {
       });
     }
 
-    // Perform scan
-    const scanResult = await mockThreatScan(ipAddress);
+    // Perform scan with real data
+    const abuseData = await checkIpWithAbuseIPDB(ipAddress);
     
     // Determine new status based on scan
-    let newStatus = 'SAFE';
-    if (scanResult.isMalicious) {
-      newStatus = scanResult.confidence > 80 ? 'MALICIOUS' : 'SUSPICIOUS';
+    const confidence = abuseData.abuseConfidenceScore || 0;
+    const isMalicious = confidence > 0;
+    
+    let newStatus = 'CLEAN'; // Match ingest logic
+    if (isMalicious) {
+      newStatus = 'MALICIOUS';
     }
 
     // Update IP record with new threat info
@@ -47,7 +35,7 @@ router.post('/:ipAddress/scan', async (req, res) => {
       where: { ipAddress },
       data: {
         status: newStatus,
-        threatScore: scanResult.isMalicious ? scanResult.confidence : 0
+        threatScore: confidence
       }
     });
 
@@ -55,10 +43,10 @@ router.post('/:ipAddress/scan', async (req, res) => {
     const scan = await prisma.threatScan.create({
       data: {
         ipAddress: ipAddress,
-        provider: scanResult.provider,
-        isMalicious: scanResult.isMalicious,
-        confidence: scanResult.confidence,
-        rawResponse: scanResult.rawResponse
+        provider: 'AbuseIPDB',
+        isMalicious: isMalicious,
+        confidence: confidence,
+        rawResponse: abuseData
       }
     });
 

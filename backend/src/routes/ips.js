@@ -1,6 +1,7 @@
 import express from 'express';
 import { prisma } from '../index.js';
 import { scanNetwork } from '../services/scanner.js';
+import { checkIpWithAbuseIPDB } from '../services/ipdb.js';
 
 const router = express.Router();
 
@@ -33,14 +34,30 @@ router.post('/ingest', async (req, res) => {
       return res.status(400).json({ error: 'IP address is required' });
     }
 
+    // Check with AbuseIPDB
+    let threatScore = 0;
+    let status = 'UNVERIFIED';
+    try {
+      const abuseData = await checkIpWithAbuseIPDB(ipAddress);
+      threatScore = abuseData.abuseConfidenceScore || 0;
+      status = threatScore > 0 ? 'MALICIOUS' : 'CLEAN';
+    } catch (error) {
+      console.error(`Failed to check AbuseIPDB for ${ipAddress}:`, error.message);
+      // Keep defaults if the check fails
+    }
+
     // Upsert the IP address
     const ip = await prisma.detectedIP.upsert({
       where: { ipAddress },
-      update: { lastSeen: new Date() },
+      update: { 
+        lastSeen: new Date(),
+        threatScore,
+        status
+      },
       create: { 
         ipAddress,
-        status: 'UNVERIFIED',
-        threatScore: 0
+        status,
+        threatScore
       }
     });
 
@@ -59,13 +76,28 @@ router.post('/scan-network', async (req, res) => {
     
     const results = [];
     for (const ipAddress of discoveredIps) {
+      // Check with AbuseIPDB
+      let threatScore = 0;
+      let status = 'UNVERIFIED';
+      try {
+        const abuseData = await checkIpWithAbuseIPDB(ipAddress);
+        threatScore = abuseData.abuseConfidenceScore || 0;
+        status = threatScore > 0 ? 'MALICIOUS' : 'CLEAN';
+      } catch (error) {
+        console.error(`Failed to check AbuseIPDB for ${ipAddress}:`, error.message);
+      }
+
       const ip = await prisma.detectedIP.upsert({
         where: { ipAddress },
-        update: { lastSeen: new Date() },
+        update: { 
+          lastSeen: new Date(),
+          threatScore,
+          status
+        },
         create: { 
           ipAddress,
-          status: 'UNVERIFIED',
-          threatScore: 0
+          status,
+          threatScore
         }
       });
       results.push(ip);

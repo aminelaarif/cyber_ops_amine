@@ -1,14 +1,17 @@
-import { exec } from 'child_process';
+import sudo from 'sudo-prompt';
 import util from 'util';
 
-const execPromise = util.promisify(exec);
+const options = {
+  name: 'Cyberops Firewall'
+};
+
+const execSudo = util.promisify(sudo.exec);
 
 export const blockIpInFirewall = async (ipAddress) => {
   try {
-    console.log(`Blocking IP ${ipAddress} in iptables...`);
-    // Drop incoming and outgoing traffic for the IP
-    await execPromise(`sudo iptables -A INPUT -s ${ipAddress} -j DROP`);
-    await execPromise(`sudo iptables -A FORWARD -s ${ipAddress} -j DROP`);
+    console.log(`Blocking IP ${ipAddress} in ufw...`);
+    // Deny traffic from the IP using ufw
+    await execSudo(`ufw deny from ${ipAddress}`, options);
     console.log(`Successfully blocked ${ipAddress}`);
     return true;
   } catch (error) {
@@ -19,10 +22,9 @@ export const blockIpInFirewall = async (ipAddress) => {
 
 export const unblockIpInFirewall = async (ipAddress) => {
   try {
-    console.log(`Unblocking IP ${ipAddress} in iptables...`);
-    // Remove the rules added above
-    await execPromise(`sudo iptables -D INPUT -s ${ipAddress} -j DROP`);
-    await execPromise(`sudo iptables -D FORWARD -s ${ipAddress} -j DROP`);
+    console.log(`Unblocking IP ${ipAddress} in ufw...`);
+    // Remove the deny rule for the IP
+    await execSudo(`ufw delete deny from ${ipAddress}`, options);
     console.log(`Successfully unblocked ${ipAddress}`);
     return true;
   } catch (error) {
